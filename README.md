@@ -33,26 +33,6 @@
 
 ---
 
-## Архитектура запроса на редирект
-
-```mermaid
-flowchart TD
-    A[GET /r/{code}] --> B[RateLimitFilter]
-    B -->|лимит превышен| C[429 Too Many Requests]
-    B -->|ok| D[Redis: GET shortcode:{code}]
-    D -->|hit| E[HINCRBY clicks + ZINCRBY top]
-    E --> F[302 Redirect]
-    D -->|miss| G[Postgres: SELECT by short_code]
-    G -->|не найдено| H[404 Not Found]
-    G -->|найдено| I[Redis: SETEX shortcode:{code} TTL]
-    I --> E
-```
-
-**Ключевая идея**: клики не пишутся в Postgres синхронно.  
-Redis выступает буфером — счётчики накапливаются в Hash, а `@Scheduled`-джоба периодически сбрасывает их батчем в БД.
-
----
-
 ## Стек
 
 - **Java 17**
@@ -163,17 +143,3 @@ for i in {1..11}; do
        -H "Content-Type: application/json" -d '{"url":"https://test.com"}'
 done
 ```
-
----
-
-## Что можно изучить на этом проекте
-
-- Cache-aside паттерн и race conditions
-- Fixed window vs Sliding window rate limiting
-- Redis как write-behind буфер перед БД
-- Sorted Set как готовый лидерборд
-- Pub/Sub vs Redis Streams
-- TTL-стратегии и атомарность операций
-- Когда нужен Redisson вместо обычного RedisTemplate
-
----
